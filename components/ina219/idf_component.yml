@@ -1,0 +1,13 @@
+version: 1.1.0
+description: INA219 driver for the ESP-IDF i2c_master API (revised fork of tny-robotics/ina219-esp-idf)
+url: https://github.com/tny-robotics/ina219-esp-idf
+tags:
+  - INA219
+  - current
+  - voltage
+  - power
+  - i2c
+  - driver
+  - esp-idf
+dependencies:
+  idf: ">=5.2"

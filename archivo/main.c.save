@@ -1,0 +1,201 @@
+#include <stdio.h>
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
+#include "esp_log.h"
+#include "esp_err.h"
+
+#include "driver/i2c_master.h"
+
+#include "bno055.h"
+
+static const char *TAG = "BNO055";
+
+#define I2C_PORT        I2C_NUM_0
+#define I2C_SDA_GPIO    GPIO_NUM_21
+#define I2C_SCL_GPIO    GPIO_NUM_22
+
+void app_main(void)
+{
+    /*
+     * ============================================================
+     * Inicialización del bus I2C
+     * ============================================================
+     */
+
+    i2c_master_bus_handle_t i2c_master_bus = NULL;
+
+    i2c_master_bus_config_t i2c_master_conf = {
+        .i2c_port = I2C_PORT,
+        .sda_io_num = I2C_SDA_GPIO,
+        .scl_io_num = I2C_SCL_GPIO,
+        .clk_source = I2C_CLK_SRC_DEFAULT,
+        .glitch_ignore_cnt = 7,
+        .flags.enable_internal_pullup = true,
+    };
+
+    ESP_ERROR_CHECK(
+        i2c_new_master_bus(
+            &i2c_master_conf,
+            &i2c_master_bus
+        )
+    );
+
+    ESP_LOGI(TAG, "Bus I2C inicializado");
+    ESP_LOGI(TAG, "SDA: GPIO%d", I2C_SDA_GPIO);
+    ESP_LOGI(TAG, "SCL: GPIO%d", I2C_SCL_GPIO);
+
+    /*
+     * ============================================================
+     * Configuración del BNO055
+     * ===============    bno055_t imu = {0};
+
+    i2c_device_config_t bno055_conf = {
+        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+        .device_address = CONFIG_BNO055_I2C_ADDR,
+        .scl_speed_hz = CONFIG_BNO055_I2C_FREQUENCY * 1000,
+    };
+
+    ESP_ERROR_CHECK(
+        i2c_master_bus_add_device(
+            i2c_master_bus,
+            &bno055_conf,
+            &imu.config.slave_handle
+        )
+    );
+
+    ESP_LOGI(TAG, "Dispositivo BNO055 agregado al bus I2C");
+
+    /*
+     * ============================================================
+     * Inicializar BNO055
+     * ============================================================
+     */
+
+    ESP_LOGI(TAG, "Iniciando BNO055...");
+
+    ESP_ERROR_CHECK(
+        bno055_initialize(&imu)
+    );
+
+    ESP_LOGI(TAG, "BNO055 inicializado correctamente");
+
+    /*
+     * ============================================================
+     * Configuración del BNO055
+     * ============================================================
+     */
+
+    uint8_t units =
+        ACC_M_S2 |
+        GY_DPS |
+        EUL_DEG |
+        TEMP_C;
+
+    ESP_ERROR_CHECK(
+        bno055_configure(
+            &imu,
+            NDOF_MODE,
+            units
+        )
+    );
+
+    ESP_LOGI(TAG, "BNO055 configurado en modo NDOF");
+
+    /*
+     * ============================================================
+     * Lectura de sensores
+     * ============================================================
+     */
+
+    while (1)
+    {
+        /*
+         * Acelerómetro
+         */
+        ESP_ERROR_CHECK(
+            bno055_get_readings(
+                &imu,
+                ACCELEROMETER
+            )
+        );
+
+        /*
+         * Giroscopio
+         */
+        ESP_ERROR_CHECK(
+            bno055_get_readings(
+                &imu,
+                GYROSCOPE
+            )
+        );
+
+        /*
+         * Magnetómetro
+         */
+        ESP_ERROR_CHECK(
+            bno055_get_readings(
+                &imu,
+                MAGNETOMETER
+            )
+        );
+
+        /*
+         * Ángulos Euler
+         */
+        ESP_ERROR_CHECK(
+            bno055_get_readings(
+                &imu,
+                EULER_ANGLE
+            )
+        );
+
+        /*
+         * Temperatura
+         */
+        ESP_ERROR_CHECK(
+            bno055_get_readings(
+                &imu,
+                TEMPERATURE
+            )
+        );
+
+        printf("\n");
+        printf("========================================\n");
+
+        printf("ACELEROMETRO\n");
+        printf("X: %7.3f m/s2\n", imu.raw_acceleration.x);
+        printf("Y: %7.3f m/s2\n", imu.raw_acceleration.y);
+        printf("Z: %7.3f m/s2\n", imu.raw_acceleration.z);
+
+        printf("\n");
+
+        printf("GIROSCOPIO\n");
+        printf("X: %7.3f deg/s\n", imu.gyroscope.x);
+        printf("Y: %7.3f deg/s\n", imu.gyroscope.y);
+        printf("Z: %7.3f deg/s\n", imu.gyroscope.z);
+
+        printf("\n");
+
+        printf("MAGNETOMETRO\n");
+        printf("X: %7.3f\n", imu.magnetometer.x);
+        printf("Y: %7.3f\n", imu.magnetometer.y);
+        printf("Z: %7.3f\n", imu.magnetometer.z);
+
+        printf("\n");
+
+        printf("ANGULOS EULER\n");
+        printf("Roll : %7.3f deg\n", imu.euler_angle.roll);
+        printf("Pitch: %7.3f deg\n", imu.euler_angle.pitch);
+        printf("Yaw  : %7.3f deg\n", imu.euler_angle.yaw);
+
+        printf("\n");
+
+        printf("TEMPERATURA: %.2f C\n", imu.temperature);
+
+        printf("========================================\n");
+
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+}
